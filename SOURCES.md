@@ -1,4 +1,4 @@
-# Sources and asset provenance — release 11
+# Sources and asset provenance — release 19
 
 ## Supplied personal material
 
@@ -64,3 +64,31 @@ The implementation uses native React, CSS, IntersectionObserver, and scroll-to-C
 Technology icons: [Skill Icons](https://skillicons.dev/) / [source and MIT license](https://github.com/tandpfun/skill-icons). License copies are included in src/assets/icons and public/third-party; the latter ships with dist.
 
 Project covers, earlier laptop vectors, capability illustrations, line icons, glass-card composition, and CSS backgrounds are original code-native artwork. No third-party portfolio source or model was copied into this project. The ad. mark and all editorial copy are specific to this portfolio.
+
+## Release 14 additions
+
+- Roavista logo: supplied PNG from the user's 21 October 2026 message, copied unchanged to `src/assets/brands/roavista.png`.
+- HealthOrbit mark: original code-native reconstruction of the supplied reference and rotation instructions; the center remains fixed.
+- AI prompting, image/video generation, music/audio generation, and use of ChatGPT, Astra, Gemini, and Claude follow the owner's stated experience. No model versions, benchmarks, certifications, or objective expertise ratings are invented. OpenAI and Gemini API work follows the supplied project descriptions.
+- Architecture trees, binary texture, code sketches, and prompt sketches are original SVG/CSS/React presentation elements. Code/prompt examples are explicitly illustrative, rather than copied production source or live model output.
+- Apple product pages were reviewed for presentation and device framing inspiration: [MacBook Pro](https://www.apple.com/macbook-pro/), [iPad Pro](https://www.apple.com/ipad-pro/). No Apple artwork, product photography, or device model is redistributed as part of this redesign.
+
+## Final bounded corrections
+
+The article's abstract, implementation, results/discussion, limitations, and conclusion were read from the supplied paper before refining the research copy. The paper establishes an authentication and medical-document/OCR implementation and describes broader contextual assistance as future work; it does not establish clinical outcomes or numerical benchmarks.
+
+The selected-work contour backdrop, portrait studio controls, AI placeholder graphics, waveform, and model-flow illustration are original React/CSS/SVG elements. No event photograph, award, or measurable project impact is invented. The AI showcase now uses the owner-supplied generated image and video.
+
+Release 17 adds only original code-native portrait accents, contour signals, fixed backdrop geometry, and background arrival motion. The AI showcase layout and its prepared owner-media slots are retained.
+
+## Release 18 supplied media and refinements
+
+- Image: `Gemini_Generated_Image_va4veyva4veyva4v.png`, supplied by the owner on 21 October 2026. Converted at its original 2752 × 1536 resolution to `src/assets/ai/creative-image.webp` (quality 90) for a smaller web resource; the full composition is retained.
+- Video: `Video_generation_prompt_for_real…_20261021144045.mp4`, supplied by the owner. Copied unchanged to `src/assets/ai/creative-video.mp4`: 10 seconds, 1920 × 1080, 24 fps, H.264/AAC. No speed change, crop, generated extension, or audio change.
+- Poster: first frame of that supplied video, extracted to `src/assets/ai/creative-video-poster.jpg`.
+- Briefs remain explicitly illustrative examples, not a claim to reproduce the original generation prompts. No model calls or new generated media were made by this website.
+- This revision only softens the work backdrop entry, rounds the portrait badges, integrates supplied media, and improves research loading/page controls.
+
+## Release 19 bounded follow-up
+
+The owner requested a new How I build presentation, a subtle coding background behind the introduction, a soft blur/fade at the bottom of Selected Work, and AI playback/volume inside the video. These are original React/CSS/SVG additions; the supplied media and other sections are retained.

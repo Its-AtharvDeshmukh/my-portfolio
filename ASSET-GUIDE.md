@@ -1,4 +1,4 @@
-# Media and exact filenames — release 11
+# Media and exact filenames — release 19
 
 The folders already exist. Keep App.jsx and index.css in `src/` and media in `src/assets/`.
 
@@ -79,7 +79,7 @@ Restart Vite after adding files if necessary, then run `npm run build` before de
 - HealthOrbit walkthrough: YouTube `uWbg2LfsJs4`.
 - MeshFlow X walkthrough: YouTube `48DeXzujtDM`.
 - Local demo MP4 files automatically take priority over those embeds.
-- Players show play/pause, mute, and volume controls below the full video frame. Playback stops offscreen, when the tab is hidden, or when a dialog covers the main player.
+- The tablet has one initial poster play button, a light volume strip, and a right-side pause/resume control after playback starts. No duplicate bottom-left play triangle is shown. The personal introduction retains standard controls. Playback stops offscreen, when the tab is hidden, or when a dialog covers the main player.
 - YouTube native controls are disabled, but its API can still show titles, branding, or related overlays. To get completely branding-free playback, use your own original MP4s with the filenames above. The portfolio does not hide overlays by cropping or covering the YouTube viewport.
 - Small tablet previews open a larger player when needed to meet YouTube's minimum player dimensions.
 - **Open full website** opens the original project in its own tab, with normal browser sizing and no portfolio scaling. TravelBharat has no supplied deployment URL and uses source access instead.
@@ -97,6 +97,35 @@ Restart Vite after adding files if necessary, then run `npm run build` before de
 
 CGPA is not displayed. No ambiguous ChatGPT version or personal job-portal URL was invented. Files matching the asset patterns ship in the public build; use those folders for public portfolio material.
 
-Release 9: Replay opening resets the laptop preview and repeats its hinge animation. The supplied introduction explicitly plays at 1×, with no speed-up filter. The paper uses five turning leaves and a sixth actual article page beneath them.
+## Project logos
 
-The project display is now a CSS tablet frame; it needs no device photograph. Earlier unused device assets are preserved. Gallery photos form a two-column grid and open in a larger view. Unconfigured job-portal URLs remain hidden until supplied.
+The supplied Roavista logo is included as `src/assets/brands/roavista.png`. HealthOrbit's rings are recreated in React/CSS by `ProjectLogo` and `.healthorbit-mark`; no raster file is required. The center stays fixed while the coral outer ring and teal inner ring rotate in opposite directions.
+
+To add another supplied logo, use `src/assets/brands/travelbharat.png` or `travelbharat.svg`, and `meshflow.png` or `meshflow.svg`. Rebuild after adding the file. Logos appear in the tablet header, rather than the project selector. The current generic icon remains until a real logo is supplied.
+
+## Research and animation
+
+The six actual preview images correspond to article pages 98–103. The full PDF includes the complete paper, pages 98–107, with front/back matter. Keep the current preview filenames. Readers can open a zoomable view; automatic turns pause during manual selection, hover/focus, hidden tabs, dialogs, reduced motion, and global animation pause.
+
+The tablet is CSS artwork; it needs no laptop/device photograph. Source changes and asset additions require a fresh production build before deploying.
+
+## Your AI showcase
+
+Your supplied generated image and video are included in `src/assets/ai/`. Keep these files with the React source.
+
+| Exact filename | Recommended format | Result |
+| --- | --- | --- |
+| `src/assets/ai/creative-image.webp` | Included: 2752 × 1536 WebP | Images showcase |
+| `src/assets/ai/creative-video.mp4` | Included: 1920 × 1080 H.264/AAC, 10 seconds | Video showcase at 1× |
+
+Image alternatives: `creative-image.png` or `creative-image.jpg`. Video alternative: `creative-video.webm`. Rebuild after adding files. The video uses its original speed and user-operated controls. Without those files, the section displays named spaces rather than a broken image or a nonworking play button. The audio waveform and model-flow graphic are illustrative; they do not generate media or call a model.
+
+## Research copy
+
+The description follows the supplied article's implemented authentication/OCR pathway and separates that from future context-aware AI work. The paper reports no numerical benchmark, clinical result, or user study. The full original paper remains linked.
+
+`src/assets/ai/creative-video-poster.jpg` is a still from the supplied clip and appears before playback. The image was converted to WebP at its original resolution for web delivery; the MP4 is byte-for-byte unchanged. To replace either, keep the same filename and rebuild.
+
+Research controls use the printed article page numbers 98–103. The complete PDF covers pages 98–107. Images are preloaded and decoded before page-turn transitions; a failed preview provides guidance to the complete PDF. Changing a page in the zoom reader returns to the top of that page.
+
+The AI showcase video uses centre playback and corner volume overlays. Project-demo and personal-introduction controls keep their existing behavior. No new media files are required by the new process section or introduction circuit.

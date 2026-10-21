@@ -1,51 +1,54 @@
-# Atharv Studio — React release 11
+# Atharv Studio — React release 19
 
-A React portfolio built around your projects, practical skills, published research, certificates, experience, and supplied photographs.
+A local React portfolio with supplied personal media, projects, certificates, research, experience, and contact links.
 
-## Main files
+## Code
 
-- `src/App.jsx`: all content, React components, hooks, interactions, and line icons.
-- `src/index.css`: the complete visual system, responsive layouts, and motion.
-- `src/main.jsx`: starts React.
+- `src/App.jsx`: content, React components, hooks, interactions, and SVG icons.
+- `src/index.css`: visual tokens, layouts, responsive behavior, and animation.
+- `src/main.jsx`: React entry point.
+- `src/assets/`: included photographs, introduction, résumé, paper, certificate scans, logos, and icons.
 
-Keep `src/assets/` alongside the source files. This React + Vite app does not need SSR, a portfolio backend, or API keys.
+Keep the asset folder with the code. This is a React + Vite app; it does not need SSR, API keys, or a portfolio backend.
 
 ## Run
 
-Use Node.js 22.12 or newer:
+Use Node.js 22.12 or newer.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-## Build and deploy
+## Build
 
 ```sh
 npm run build
 npm run preview
 ```
 
-Deploy the contents of `dist/`. The deploy ZIP has index.html at its root. For Netlify or Vercel, select Vite, build with `npm run build`, and use `dist` as the output directory. Asset paths support subdirectory hosting.
+Deploy the contents of `dist/`. The deployment ZIP contains index.html at its root. For a Vite deployment, use `npm run build` and output directory `dist`. Relative asset paths support subdirectory hosting. Nothing has been published by this task.
 
 ## Page order
 
-Introduction → projects → building approach → toolkit → research → certificates → experience and education → photo gallery → contact.
+Introduction → selected projects → how I build → toolkit → AI practice → research → credentials → experience and education → photographs → contact.
 
-## This release
+## Current behavior
 
-- The laptop and its hinge animation are replaced by a simple landscape tablet frame. Project videos retain their full frame, with play/pause and volume controls below them.
-- Four project selectors, clear contribution notes, project details, and separate full-site links replace the repeated walkthrough section. No live websites are scaled into tiny iframes.
-- Your opening section includes your supplied desk portrait, a coding detail, recent project context, résumé access, and your actual introduction video at its original 1× speed.
-- A full-width glass navigation bar supports desktop and phone menus. Normal scrolling works with scrollbars hidden.
-- Main cards and controls share the 24 px corner token. The tablet's inset screen corners follow its bezel; circular icon controls remain circular.
-- A shorter four-stage building scene, the preserved interactive toolkit, and replayable entry animations support the page. Animation pause and reduced-motion handling are included.
-- Research keeps five turning article leaves over a sixth actual page. Certificates retain their existing layout.
-- Photos use a regular two-column gallery with captions beneath the images. Every photo opens in a full-size view.
-- The earlier contact layout is restored with larger text and four profile cards. Email, phone, WhatsApp, résumé, GitHub, LinkedIn, LeetCode, and Instagram use supplied links.
-- Optional job-portal URLs remain editable in PROFILES. Unconfigured profiles are hidden from visitors.
-- Dark-mode backgrounds and text colors are updated, including the animated building story.
+- The opening combines a concise identity with a portrait studio: Meet me, My builds, and AI practice. The project choices open real case studies. The work and résumé actions stay prominent, including on phones. The supplied introduction remains at normal 1× speed.
+- Full-width glass navigation is restored. The phone menu, appearance switch, and curated ai. guide remain.
+- A horizontally scrollable project selector sits immediately above the selected project's description. The landscape tablet stays stationary while its screen content makes a directional app-style entrance.
+- HealthOrbit's original mark uses a fixed teal center with a coral outer ring rotating anticlockwise and a teal inner ring rotating clockwise. The supplied Roavista logo appears inside the tablet header. TravelBharat can use an optional supplied logo later.
+- Videos keep their complete 16:9 frame. The tablet uses a light control strip; there is no duplicate bottom-left play triangle. Project websites open separately at normal browser size.
+- How I build is a four-step journey with focused explanations, project examples, and a code editor that updates to a question, interface sketch, connections, or refinement checklist. The illustration has restrained spring-based pointer movement. No long pinned scroll scene is used.
+- The approved interactive toolkit is preserved. AI practice offers image, video, audio, and model/API views, including the supplied generated image and 10-second video. OpenAI API and Gemini API are explicit; additional tools are described without inventing expertise ratings.
+- Research leads with the actual paper title and a source-grounded explanation of its contribution. Actual article page numbers (98–103) sit above larger preview pages; each next image is decoded before turning without a surrounding square panel. It turns automatically every 6.5 seconds while in view, with pause/resume and manual page controls. Manual selection pauses automatic turns. A separate reader provides zoom, scrolling, page labels, and the complete PDF link.
+- Certificates retain their working gallery. Photo cards have reserved media geometry, remain visible without a reveal observer, and open full-size. Contact keeps the requested wording, with a theme-aware studio palette and supplied social/contact URLs.
+- A flowing contour background is unique to the selected-work/tablet section. Four signals follow its curves. Fixed artwork geometry prevents the background from rescaling when More things I’ve built expands. A soft fade and slight blur introduce the lines alongside the section colour. Circular portrait accents and short code add detail around the image; subtle background arrivals replay with section entry. Outer panels use a shared 24 px radius. Nested tablet screen corners follow the bezel; round icon controls and paper sheets use appropriate geometry.
+- Entry animations replay as sections return to view. Continuous decorative motion pauses offscreen; the footer pause control and system reduced-motion preference disable motion. Scrollbars are hidden while scrolling remains available.
 
-The `ai.` guide offers curated portfolio answers; it does not call an AI service. No sound starts without opening or playing a video. Your personal introduction, publication, certificate scans, and photographs are included in the source archive.
+The ai. guide and prompt examples are browser-local, curated content. They do not call a live AI model. Media playback begins through user action. Your personal introduction is approximately 27.3 seconds at 1× speed.
 
-See ASSET-GUIDE.md for exact filenames, SOURCES.md for provenance, and VALIDATION.md for checked behavior and practical limits.
+See `ASSET-GUIDE.md`, `SOURCES.md`, and `VALIDATION.md` for exact filenames, provenance, checks, and limits.
+
+Release 19 changes only the requested process section, animated circuit behind the opening, soft work-background exit, and AI video controls. The AI video has centre playback and a compact volume overlay; no separate playback strip takes up layout space.

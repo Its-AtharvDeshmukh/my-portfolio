@@ -1,7 +1,7 @@
 {
   "name": "atharv-react-portfolio",
   "private": true,
-  "version": "14.0.0",
+  "version": "20.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

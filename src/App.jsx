@@ -11,7 +11,7 @@ import "./index.css";
 /* All portfolio content and components live here. Add media using ASSET-GUIDE.md.
    Vite discovers these files at build time; absent files get intentional placeholders. */
 const files = import.meta.glob(
-  "./assets/**/*.{webp,png,jpg,jpeg,svg,mp4,webm,pdf,pptx}",
+  "./assets/**/*.{webp,png,jpg,jpeg,svg,mp4,webm,mp3,pdf,pptx}",
   {
     eager: true,
     query: "?url",
@@ -800,6 +800,35 @@ function Placeholder({ label, file, size, icon = "photo", className = "" }) {
     </div>
   );
 }
+const paperPageSrc = (page) =>
+  media(
+    `images/${page === 1 ? "healthorbit-paper.png" : `healthorbit-paper-page-${page}.png`}`,
+  );
+const paperLoads = new Map();
+function loadPaperPage(page) {
+  const src = paperPageSrc(page);
+  if (!paperLoads.has(src)) {
+    const pending = new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = async () => {
+        try {
+          await image.decode();
+          resolve(src);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      image.onerror = () => reject(new Error("Paper page could not load"));
+      image.src = src;
+    }).catch((error) => {
+      paperLoads.delete(src);
+      throw error;
+    });
+    paperLoads.set(src, pending);
+  }
+  return paperLoads.get(src);
+}
+
 function Research({ onOpen }) {
   const [page, setPage] = useState(1);
   const [previous, setPrevious] = useState(null);
@@ -809,11 +838,40 @@ function Research({ onOpen }) {
   const [pageVisible, setPageVisible] = useState(!document.hidden);
   const paperRef = useRef(null);
   const { enabled, modalOpen } = useContext(Motion);
-  const turnTo = (next, manual = false) => {
-    if (next === page) return;
+  const [loadingPage, setLoadingPage] = useState(null);
+  const [pageError, setPageError] = useState(false);
+  const turnRequest = useRef(0);
+  useEffect(
+    () => () => {
+      turnRequest.current += 1;
+    },
+    [],
+  );
+  useEffect(() => {
+    if (inView)
+      [1, 2, 3, 4, 5, 6].forEach((p) => loadPaperPage(p).catch(() => {}));
+  }, [inView]);
+  const turnTo = async (next, manual = false) => {
     if (manual) setAutoTurn(false);
-    setPrevious(page);
-    setPage(next);
+    const request = ++turnRequest.current;
+    if (next === page) {
+      setLoadingPage(null);
+      return;
+    }
+    setLoadingPage(next);
+    setPageError(false);
+    try {
+      await loadPaperPage(next);
+      if (request !== turnRequest.current) return;
+      setPrevious(page);
+      setPage(next);
+    } catch {
+      if (request !== turnRequest.current) return;
+      setPageError(true);
+      setAutoTurn(false);
+    } finally {
+      if (request === turnRequest.current) setLoadingPage(null);
+    }
   };
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -831,6 +889,7 @@ function Research({ onOpen }) {
   useEffect(() => {
     if (
       !autoTurn ||
+      loadingPage !== null ||
       !enabled ||
       !inView ||
       !pageVisible ||
@@ -840,14 +899,21 @@ function Research({ onOpen }) {
       return;
     const timer = setTimeout(() => turnTo(page === 6 ? 1 : page + 1), 6500);
     return () => clearTimeout(timer);
-  }, [autoTurn, enabled, inView, pageVisible, hovering, modalOpen, page]);
+  }, [
+    autoTurn,
+    enabled,
+    inView,
+    pageVisible,
+    hovering,
+    modalOpen,
+    page,
+    loadingPage,
+  ]);
   useEffect(() => {
     if (previous === null) return;
     const timer = setTimeout(() => setPrevious(null), 900);
     return () => clearTimeout(timer);
   }, [previous, page]);
-  const file =
-    page === 1 ? "healthorbit-paper.png" : `healthorbit-paper-page-${page}.png`;
   return (
     <section className="section-space research-reader-section" id="research">
       <AmbientField variant="research-graph" />
@@ -856,7 +922,7 @@ function Research({ onOpen }) {
           eyebrow="Published research"
           title={
             <>
-              Built. Studied.<span>Shared.</span>
+              HealthOrbit.<span>From build to paper.</span>
             </>
           }
         >
@@ -871,17 +937,32 @@ function Research({ onOpen }) {
             <span className="publication-label">
               <Icon name="document" /> IJRASET · September 2026
             </span>
-            <h3>
-              From a working idea
-              <br />
-              to a published paper.
-            </h3>
-            <p className="paper-full-title">{PAPER.title}</p>
+            <h3 className="publication-title">{PAPER.title}</h3>
             <p>
               Our co-authored paper describes a framework connecting health
               information, medical documents, and context-aware AI assistance in
               HealthOrbit.
             </p>
+            <div className="research-contribution">
+              <p className="eyebrow">Why this work matters</p>
+              <p>
+                The paper documents a working login and medical-document/OCR
+                pathway: turning information in supported reports into
+                machine-readable text. It also sets out a modular direction for
+                bringing health information together.
+              </p>
+              <details>
+                <summary>
+                  What the study establishes <Icon name="plus" />
+                </summary>
+                <p>
+                  The evaluation is implementation-focused. The paper presents
+                  contextual AI as a future architectural direction and reports
+                  no clinical outcomes, quantitative benchmarks, or user-study
+                  results.
+                </p>
+              </details>
+            </div>
             <dl className="paper-meta">
               <div>
                 <dt>My role</dt>
@@ -934,23 +1015,29 @@ function Research({ onOpen }) {
               <span>
                 <Icon name="document" /> Article preview
               </span>
-              <span>{page} / 6</span>
+              <span>
+                Page {97 + page} <small>of article pages 98–107</small>
+              </span>
             </div>
             <button
               className="paper-preview"
               onClick={() =>
                 onOpen({
-                  kind: "photo",
-                  item: { file, label: `HealthOrbit article preview ${page}` },
-                  title: "Published article preview",
+                  kind: "paper-reader",
+                  page,
+                  title: "Read the research.",
                 })
               }
-              aria-label={`Enlarge article preview ${page}`}
+              aria-label={`Read and zoom article page ${97 + page}`}
+              aria-busy={loadingPage !== null}
             >
               <img
                 key={page}
-                src={media(`images/${file}`)}
-                alt={`Actual HealthOrbit article preview ${page}`}
+                src={paperPageSrc(page)}
+                alt={`Published HealthOrbit article page ${97 + page}`}
+                width="857"
+                height="1212"
+                onError={() => setPageError(true)}
                 loading="lazy"
               />
               {previous !== null && (
@@ -968,7 +1055,7 @@ function Research({ onOpen }) {
                 </span>
               )}
               <span className="enlarge-hint">
-                <Icon name="plus" /> Enlarge page
+                <Icon name="plus" /> Read & zoom
               </span>
             </button>
             <div className="reader-controls">
@@ -988,11 +1075,11 @@ function Research({ onOpen }) {
                 {[1, 2, 3, 4, 5, 6].map((p) => (
                   <button
                     key={p}
-                    aria-label={`Article preview ${p}`}
+                    aria-label={`Show article page ${97 + p}`}
                     aria-pressed={p === page}
                     onClick={() => turnTo(p, true)}
                   >
-                    {p}
+                    {97 + p}
                   </button>
                 ))}
               </div>
@@ -1018,8 +1105,12 @@ function Research({ onOpen }) {
                   ? "Pause automatic turns"
                   : "Resume automatic turns"}
             </button>
-            <p className="reader-note">
-              Six preview pages. Open the PDF for the complete publication.
+            <p className="reader-note" role="status">
+              {loadingPage !== null
+                ? `Loading page ${97 + loadingPage}…`
+                : pageError
+                  ? "This preview could not load. Read the complete PDF using the link beside it."
+                  : "Preview: pages 98–103. Open the PDF for the complete article."}
             </p>
           </div>
         </div>
@@ -1053,14 +1144,14 @@ function About() {
                 "August 2026 — Present",
                 "Unified Mentor",
                 "Full-Stack Developer Intern",
-                "Developing full-stack assignments and TravelBharat. Working through application structure, debugging, Git, and practical product development.",
+                "Developing full-stack assignments and TravelBharat. Working through application structure, debugging, Git, and practical product development. Applying typed interfaces and state-wise destination discovery in TravelBharat.",
               ],
               [
                 "02",
                 "2026 · One month",
                 "Oasis Infobyte",
                 "Web Development Intern",
-                "Built responsive portfolio, utility, and productivity projects using HTML, CSS, JavaScript, Git, and GitHub.",
+                "Built responsive portfolio, utility, and productivity projects using HTML, CSS, JavaScript, Git, and GitHub. Practiced translating a brief into a working interface and refining its behavior.",
               ],
             ].map(([n, date, company, role, text]) => (
               <article className="journey-card" data-reveal key={company}>
@@ -1103,6 +1194,10 @@ function About() {
             <span className="graduation">
               Expected June 2027 <Icon name="arrow" />
             </span>
+            <p className="education-focus">
+              Learning through full-stack projects, Java problem-solving, and
+              team-based software development.
+            </p>
             <div className="education-divider" />
             <small>Higher Secondary Certificate · 2023</small>
             <p>Major Hemant Jakate College, Nagpur</p>
@@ -1264,7 +1359,13 @@ function Header({ appearance, onAppearance }) {
       (entries) =>
         entries.forEach((e) => {
           if (e.isIntersecting)
-            setActive(e.target.id === "overview" ? "" : e.target.id);
+            setActive(
+              e.target.id === "overview"
+                ? ""
+                : e.target.id === "ai-practice"
+                  ? "skills"
+                  : e.target.id,
+            );
         }),
       { rootMargin: "-15% 0px -65% 0px" },
     );
@@ -1273,6 +1374,7 @@ function Header({ appearance, onAppearance }) {
       "work",
       "approach",
       "skills",
+      "ai-practice",
       "research",
       "about",
       "contact",
@@ -1323,10 +1425,10 @@ function Header({ appearance, onAppearance }) {
         >
           {[
             ["Work", "work"],
-            ["How I build", "approach"],
             ["Tools", "skills"],
             ["Research", "research"],
             ["Journey", "about"],
+            ["How I build", "approach"],
           ].map(([label, id]) => (
             <a
               key={id}
@@ -1459,7 +1561,7 @@ function AmbientField({ variant = "" }) {
 
 /* A damped spring updates CSS variables directly, only while a fine pointer moves.
    Touch, reduced-motion, hidden tabs, and offscreen elements do not run the loop. */
-function usePointerPhysics(ref) {
+function usePointerPhysics(ref, identity) {
   const { enabled } = useContext(Motion);
   useEffect(() => {
     const el = ref.current;
@@ -1536,21 +1638,59 @@ function usePointerPhysics(ref) {
       el.removeEventListener("pointerleave", leave);
       document.removeEventListener("visibilitychange", hide);
     };
-  }, [ref, enabled]);
+  }, [ref, enabled, identity]);
 }
 
 function Hero({ onOpen }) {
+  const [view, setView] = useState("portrait");
   const visual = useRef(null);
-  usePointerPhysics(visual);
+  usePointerPhysics(visual, view);
   return (
     <section
-      className="hero studio-hero"
+      className="hero landing-sixteen"
       id="overview"
       aria-labelledby="hero-title"
     >
-      <AmbientField variant="hero-graph" />
-      <div className="shell hero-layout">
-        <div className="hero-copy" data-reveal>
+      <div className="landing-light" aria-hidden="true">
+        <i />
+        <i />
+        <span>0101 · 0010 · 1011</span>
+      </div>
+      <div className="hero-code-atmosphere" aria-hidden="true">
+        <svg viewBox="0 0 900 700" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="hero-code-ink">
+              <stop stopColor="#6189d9" />
+              <stop offset="1" stopColor="#9b8ee7" />
+            </linearGradient>
+          </defs>
+          <path
+            className="hero-trace"
+            d="M-80 610H90Q130 610 130 570V430Q130 390 170 390H290Q330 390 330 350V180Q330 140 370 140H590Q630 140 630 100V-60"
+          />
+          <path
+            className="hero-trace"
+            d="M-50 650H135Q175 650 175 610V480Q175 440 215 440H390Q430 440 430 400V240Q430 200 470 200H730"
+          />
+          <path
+            className="hero-code-pulse"
+            pathLength="1000"
+            d="M-80 610H90Q130 610 130 570V430Q130 390 170 390H290Q330 390 330 350V180Q330 140 370 140H590Q630 140 630 100V-60"
+          />
+          <g>
+            <circle cx="130" cy="510" r="5" />
+            <circle cx="330" cy="270" r="5" />
+            <circle cx="630" cy="70" r="5" />
+          </g>
+        </svg>
+        <code className="hero-code-token token-a">&lt;idea /&gt;</code>
+        <code className="hero-code-token token-b">
+          &#123; purpose: true &#125;
+        </code>
+        <code className="hero-code-token token-c">0101 · 1010</code>
+      </div>
+      <div className="shell landing-layout">
+        <div className="landing-copy" data-reveal>
           <p className="eyebrow">
             <span className="live-dot" /> Full-stack developer & AI builder
           </p>
@@ -1559,15 +1699,15 @@ function Hero({ onOpen }) {
             <br />
             <span>Deshmukh.</span>
           </h1>
-          <p className="hero-statement">
-            Ideas into interfaces.
+          <p className="landing-lead">
+            I build useful software.
             <br />
-            Interfaces into <em>something useful.</em>
+            <strong>And make it feel considered.</strong>
           </p>
-          <p className="hero-description">
-            I build web products with clear interfaces, connected backends, and
-            purposeful AI. A Computer Engineering student with an eye for
-            design—and a love for making things work.
+          <p className="landing-description">
+            Web products, clear interfaces, and connected AI workflows. I’m a
+            Computer Engineering student who enjoys shaping the experience and
+            building the systems behind it.
           </p>
           <div className="hero-actions">
             <a href="#work" className="button primary">
@@ -1577,65 +1717,242 @@ function Hero({ onOpen }) {
               View résumé
             </External>
           </div>
-          <div className="hero-disciplines">
+          <div className="landing-disciplines">
             <span>Full-stack development</span>
-            <span>UI design</span>
+            <span>Interface design</span>
             <span>Prompt engineering</span>
           </div>
+          <p className="landing-location">
+            <Icon name="location" /> Nagpur, India{" "}
+            <span>Computer Engineering · Class of 2027</span>
+          </p>
         </div>
-        <div className="hero-visual" data-reveal>
-          <div className="portrait-stage" ref={visual}>
-            <div className="portrait-orbit" aria-hidden="true" />
-            <div className="hero-photo">
-              <img
-                src={media("images/atharv-at-desk.jpeg")}
-                alt="Atharv at his desk"
-                fetchPriority="high"
-              />
-            </div>
-            <span className="portrait-node node-react" aria-hidden="true">
-              <Icon name="react" />
-            </span>
-            <span className="portrait-node node-code" aria-hidden="true">
-              <Icon name="braces" />
-            </span>
-            <div className="portrait-terminal">
-              <span>
-                <i /> developer.js
-              </span>
-              <code>
-                <b>const</b> focus = [<br />
-                &nbsp; <em>"design"</em>, <em>"code"</em>, <em>"people"</em>
-                <br />
-                ];<span className="code-caret">▍</span>
-              </code>
-            </div>
-          </div>
-          <button
-            className="intro-link"
-            onClick={() => onOpen({ kind: "intro", title: "Meet Atharv" })}
+        <div className="landing-studio" data-reveal>
+          <div
+            className="landing-view-tabs"
+            role="group"
+            aria-label="Explore the developer studio"
           >
-            <span className="intro-play">
-              <Icon name="play" />
-            </span>
-            <span>
-              <strong>A little about me.</strong>
-              <small>Watch my introduction · 27 seconds</small>
-            </span>
-            <Icon name="arrow" />
-          </button>
+            {[
+              ["portrait", "Meet me", "people"],
+              ["projects", "My builds", "braces"],
+              ["ai", "AI practice", "mesh"],
+            ].map(([id, label, icon]) => (
+              <button
+                key={id}
+                aria-pressed={view === id}
+                onClick={() => setView(id)}
+              >
+                <Icon name={icon} />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className={`landing-view view-${view}`} key={view}>
+            {view === "portrait" ? (
+              <>
+                <div className="landing-portrait" ref={visual}>
+                  <img
+                    src={media("images/atharv-at-desk.jpeg")}
+                    alt="Atharv at his desk"
+                    fetchPriority="high"
+                    width="1726"
+                    height="1256"
+                  />
+                  <span
+                    className="portrait-detail detail-react"
+                    aria-hidden="true"
+                  >
+                    <Icon name="react" />
+                  </span>
+                  <span
+                    className="portrait-detail detail-api"
+                    aria-hidden="true"
+                  >
+                    <Icon name="mesh" />
+                  </span>
+                  <div className="portrait-code-detail" aria-hidden="true">
+                    <code>
+                      <span>const</span> build = &#123; ui, api &#125;;
+                      <br />
+                      connect(build, ai);
+                      <i />
+                    </code>
+                  </div>
+                  <span className="landing-portrait-note">
+                    <i /> The person behind the projects.
+                  </span>
+                </div>
+                <button
+                  className="landing-intro"
+                  onClick={() =>
+                    onOpen({ kind: "intro", title: "Meet Atharv" })
+                  }
+                >
+                  <span>
+                    <Icon name="play" />
+                  </span>
+                  <div>
+                    <strong>A little about me.</strong>
+                    <small>My introduction · 27 seconds</small>
+                  </div>
+                  <Icon name="arrow" />
+                </button>
+              </>
+            ) : view === "projects" ? (
+              <div className="landing-projects">
+                <p className="eyebrow">Four ideas, built in code</p>
+                {PROJECTS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => onOpen({ kind: "preview", item: p })}
+                  >
+                    <ProjectLogo project={p} />
+                    <span>
+                      <strong>{p.name}</strong>
+                      <small>{p.label}</small>
+                    </span>
+                    <Icon name="arrow" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="landing-ai">
+                <div className="landing-ai-orb" aria-hidden="true">
+                  <Icon name="mesh" />
+                </div>
+                <p className="eyebrow">Prompts. Models. Possibilities.</p>
+                <h3>
+                  Creative direction.
+                  <br />
+                  Practical integration.
+                </h3>
+                <p>
+                  I use AI for software workflows, image and video generation,
+                  and music and audio exploration.
+                </p>
+                <div>
+                  {["ChatGPT", "Gemini", "Claude", "Astra"].map((n) => (
+                    <span key={n}>{n}</span>
+                  ))}
+                </div>
+                <a href="#ai-practice" className="text-link">
+                  Explore my AI practice <Icon name="arrow" />
+                </a>
+              </div>
+            )}
+          </div>
+          <div className="landing-code" aria-hidden="true">
+            <span>&gt;_</span>
+            <code>design → build → connect → refine</code>
+            <i />
+          </div>
         </div>
-      </div>
-      <div className="shell hero-footline">
-        <span>
-          <Icon name="location" /> Nagpur, India
-        </span>
-        <span>Computer Engineering · Class of 2027</span>
-        <a href="#work">
-          Explore what I’m building <Icon name="arrow" />
-        </a>
       </div>
     </section>
+  );
+}
+
+function WorkBackdrop() {
+  const curves = Array.from({ length: 17 }, (_, i) => ({
+    d: `M${540 + i * 22} -80 C${280 + i * 20} ${140 + i * 4},${1450 - i * 17} ${260 + i * 7},${740 + i * 23} 930`,
+    i,
+  }));
+  return (
+    <div className="work-contours" aria-hidden="true">
+      <svg viewBox="0 0 1400 850" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="work-ribbon" x1="0" y1="1" x2="1" y2="0">
+            <stop stopColor="#a2cddd" />
+            <stop offset=".5" stopColor="#a3acec" />
+            <stop offset="1" stopColor="#ddc5e8" />
+          </linearGradient>
+        </defs>
+        <g>
+          {curves.map(({ d, i }) => (
+            <path key={i} d={d} style={{ "--ribbon-delay": `${i * -0.25}s` }} />
+          ))}
+        </g>
+        <g>
+          {curves
+            .filter(({ i }) => i % 4 === 2)
+            .map(({ d, i }) => (
+              <path
+                className="contour-signal"
+                key={i}
+                d={d}
+                pathLength="1000"
+                style={{
+                  "--ribbon-delay": `${i * -0.25}s`,
+                  "--signal-delay": `${i * -1.8}s`,
+                }}
+              />
+            ))}
+        </g>
+      </svg>
+      <div className="work-glow glow-a" />
+      <div className="work-glow glow-b" />
+    </div>
+  );
+}
+
+function AICreativeMedia({ type }) {
+  const image =
+    media("ai/creative-image.webp") ||
+    media("ai/creative-image.png") ||
+    media("ai/creative-image.jpg");
+  const video =
+    media("ai/creative-video.mp4") || media("ai/creative-video.webm");
+  if (type === "motion" && video)
+    return (
+      <div className="ai-owner-media">
+        <CleanVideo
+          src={video}
+          poster={
+            media("ai/creative-video-poster.jpg") ||
+            image ||
+            media("illustrations/poster-intro.svg")
+          }
+          title="AI-generated video showcase"
+          overlayControls
+        />
+      </div>
+    );
+  if (type === "visual" && image)
+    return (
+      <div className="ai-owner-media">
+        <img
+          src={image}
+          alt="AI-generated scene blending a real city with an illustrated paper world"
+          width="2752"
+          height="1536"
+          loading="lazy"
+        />
+        <span>From an idea to a visual · AI-generated</span>
+      </div>
+    );
+  return (
+    <div className={`ai-future-media future-${type}`}>
+      <div className="future-ribbon" aria-hidden="true" />
+      <span className="future-media-icon">
+        <Icon name={type === "motion" ? "play" : "photo"} />
+      </span>
+      <strong>
+        {type === "motion"
+          ? "Your AI-generated video"
+          : "Your AI-generated image"}
+      </strong>
+      <p>
+        {type === "motion"
+          ? "A place for your original video showcase."
+          : "A place for your original visual showcase."}
+      </p>
+      <small>
+        {type === "motion"
+          ? "Video showcase · add later"
+          : "Image showcase · add later"}
+      </small>
+    </div>
   );
 }
 
@@ -1730,6 +2047,7 @@ function CleanVideo({
   title = "Portfolio film",
   autoplay = false,
   minimalControls = false,
+  overlayControls = false,
 }) {
   const ref = useRef(null),
     holder = useRef(null);
@@ -1771,7 +2089,10 @@ function CleanVideo({
     else ref.current?.pause();
   };
   return (
-    <div className="clean-player" ref={holder}>
+    <div
+      className={`clean-player ${overlayControls ? "overlay-player" : ""}`}
+      ref={holder}
+    >
       <div className="player-canvas">
         {started ? (
           <video
@@ -1805,11 +2126,20 @@ function CleanVideo({
             </span>
           </button>
         )}
+        {overlayControls && started && (
+          <button
+            className={`center-playback ${playing ? "is-playing" : ""}`}
+            onClick={toggle}
+            aria-label={`${playing ? "Pause" : "Play"} ${title}`}
+          >
+            <Icon name={playing ? "pause" : "play"} />
+          </button>
+        )}
       </div>
       <div
         className={`player-controls ${minimalControls ? "minimal-controls" : ""}`}
       >
-        {!minimalControls && (
+        {!minimalControls && !overlayControls && (
           <button
             onClick={toggle}
             aria-label={`${playing ? "Pause" : "Play"} ${title}`}
@@ -1834,7 +2164,7 @@ function CleanVideo({
             aria-label={`${title} volume`}
           />
         </div>
-        {minimalControls && started && (
+        {minimalControls && !overlayControls && started && (
           <button
             className="corner-playback"
             onClick={toggle}
@@ -2096,9 +2426,423 @@ function ProjectVideo({
   );
 }
 
+function ProjectLogo({ project }) {
+  if (project.id === "healthorbit")
+    return (
+      <span className="healthorbit-mark" aria-hidden="true">
+        <i className="health-ring outer-ring" />
+        <i className="health-ring inner-ring" />
+        <b />
+      </span>
+    );
+  if (project.id === "roavista")
+    return (
+      <img
+        className="project-brand-image"
+        src={media("brands/roavista.png")}
+        alt=""
+      />
+    );
+  const logo =
+    media(`brands/${project.id}.png`) || media(`brands/${project.id}.svg`);
+  return logo ? (
+    <img className="project-brand-image" src={logo} alt="" />
+  ) : (
+    <Icon name={project.icon} />
+  );
+}
+
+function MusicShowcase() {
+  const audio = useRef(null),
+    holder = useRef(null);
+  const { modalOpen } = useContext(Motion);
+  const [playing, setPlaying] = useState(false),
+    [volume, setVolume] = useState(70),
+    [duration, setDuration] = useState(0),
+    [time, setTime] = useState(0),
+    [error, setError] = useState(false);
+  const src = media("audio/the-luminous-unfolding.mp3");
+  const clock = (value) =>
+    `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, "0")}`;
+  useEffect(() => {
+    const stop = () => audio.current?.pause();
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) stop();
+    });
+    if (holder.current) observer.observe(holder.current);
+    const visibility = () => {
+      if (document.hidden) stop();
+    };
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      stop();
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, []);
+  useEffect(() => {
+    if (audio.current) {
+      audio.current.volume = volume / 100;
+      audio.current.playbackRate = 1;
+    }
+  }, [volume]);
+  useEffect(() => {
+    if (modalOpen) audio.current?.pause();
+  }, [modalOpen]);
+  const toggle = () => {
+    if (audio.current?.paused) audio.current.play().catch(() => setError(true));
+    else audio.current?.pause();
+  };
+  return (
+    <div
+      className={`ai-medium-art music-showcase ${playing ? "is-playing" : ""}`}
+      ref={holder}
+    >
+      <div className="creative-grid" aria-hidden="true" />
+      <div className="music-title">
+        <span>Music showcase</span>
+        <strong>The Luminous Unfolding</strong>
+      </div>
+      <div className="creative-wave" aria-hidden="true">
+        {Array.from({ length: 33 }, (_, i) => (
+          <i
+            key={i}
+            style={{
+              "--bar": `${18 + Math.abs(Math.sin(i * 0.63)) * 65}%`,
+              "--beat": `${i * -0.13}s`,
+            }}
+          />
+        ))}
+      </div>
+      <audio
+        ref={audio}
+        src={src}
+        preload="metadata"
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+        onPlay={() => {
+          setPlaying(true);
+          setError(false);
+        }}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onError={() => setError(true)}
+        aria-label="The Luminous Unfolding"
+      />
+      <div className="music-controls">
+        <button
+          className="music-play"
+          onClick={toggle}
+          aria-label={`${playing ? "Pause" : "Play"} The Luminous Unfolding`}
+        >
+          <Icon name={playing ? "pause" : "play"} />
+        </button>
+        <div className="music-progress">
+          <input
+            type="range"
+            min="0"
+            max={duration || 1}
+            step=".1"
+            value={Math.min(time, duration || 1)}
+            disabled={!duration}
+            onChange={(e) => {
+              if (audio.current)
+                audio.current.currentTime = Number(e.target.value);
+            }}
+            aria-label="Music playback position"
+          />
+          <span>
+            {clock(time)} / {clock(duration)}
+          </span>
+        </div>
+        <div className="music-volume">
+          <button
+            aria-label={volume ? "Mute music" : "Unmute music"}
+            onClick={() => setVolume(volume ? 0 : 70)}
+          >
+            <Icon name={volume ? "volume" : "muted"} />
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            aria-label="Music volume"
+          />
+        </div>
+      </div>
+      {error && (
+        <p className="music-error" role="status">
+          Audio unavailable. <External href={src}>Open the music file</External>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AIPractice() {
+  const [selected, setSelected] = useState(0);
+  const modes = [
+    {
+      name: "Images",
+      icon: "photo",
+      title: "Find a visual direction.",
+      text: "I use AI image generation to explore compositions, styles, and ideas—then refine the prompt around the intended result.",
+      brief:
+        "Subject: a city between reality and imagination.\nDirection: photography meets a paper world.\nRefine: composition, lighting, and consistency.",
+      type: "visual",
+    },
+    {
+      name: "Video",
+      icon: "play",
+      title: "Turn a brief into a sequence.",
+      text: "I use AI video generation to explore movement, visual continuity, and scene direction, with a clear brief for each shot.",
+      brief:
+        "Scene: an everyday moment becomes imaginative.\nMotion: gentle, continuous, and deliberate.\nRefine: pacing, continuity, and framing.",
+      type: "motion",
+    },
+    {
+      name: "Music & audio",
+      icon: "volume",
+      title: "Give the idea a sound.",
+      text: "I use AI music and audio generation to explore mood, structure, and creative direction as part of a wider project.",
+      brief:
+        "Mood: focused, warm, and understated.\nStructure: a short introduction and resolve.\nRefine: energy, texture, and timing.",
+      type: "audio",
+    },
+    {
+      name: "Models & APIs",
+      icon: "mesh",
+      title: "Connect the model to the task.",
+      text: "I write structured prompts and connect models through APIs. My projects include OpenAI and Gemini integrations for practical workflows.",
+      brief:
+        "Task: route a document workflow.\nContext: inputs, dependencies, constraints.\nRefine: output format and useful feedback.",
+      type: "models",
+    },
+  ];
+  const mode = modes[selected];
+  return (
+    <section className="section-space ai-practice ai-workshop" id="ai-practice">
+      <AmbientField variant="ai-workshop-graph" />
+      <div className="shell">
+        <SectionHead
+          eyebrow="AI, with intent"
+          title={
+            <>
+              The idea comes first.<span>The tools open it up.</span>
+            </>
+          }
+        >
+          <p>
+            Prompt engineering, model integration,
+            <br />
+            and creative work across image, video, and audio.
+          </p>
+        </SectionHead>
+        <div className="ai-workshop-layout" data-reveal>
+          <div className="ai-workshop-copy">
+            <p className="eyebrow">Choose a part of my practice</p>
+            <div
+              className="ai-mode-tabs"
+              role="group"
+              aria-label="Explore AI skills"
+            >
+              {modes.map((m, i) => (
+                <button
+                  key={m.name}
+                  aria-pressed={selected === i}
+                  onClick={() => setSelected(i)}
+                >
+                  <Icon name={m.icon} />
+                  {m.name}
+                </button>
+              ))}
+            </div>
+            <div className="ai-mode-story" key={selected}>
+              <h3>{mode.title}</h3>
+              <p>{mode.text}</p>
+            </div>
+            <div className="ai-models">
+              <span>Tools I work with</span>
+              <div>
+                {["ChatGPT", "Astra", "Gemini", "Claude"].map((m) => (
+                  <span key={m}>{m}</span>
+                ))}
+                <span className="more-ai-tools">
+                  and more <i aria-hidden="true">•••</i>
+                </span>
+              </div>
+            </div>
+            <div className="ai-api-tags">
+              <span>API integration</span>
+              <strong>OpenAI API</strong>
+              <strong>Gemini API</strong>
+            </div>
+            <p className="ai-workshop-note">
+              I explore a broad range of AI tools for creating and building.
+              Clear instructions, relevant context, and thoughtful refinement
+              stay at the center.
+            </p>
+          </div>
+          <div className={`ai-creative-desk mode-${mode.type}`} key={selected}>
+            {mode.type === "visual" || mode.type === "motion" ? (
+              <AICreativeMedia type={mode.type} />
+            ) : mode.type === "audio" ? (
+              <MusicShowcase />
+            ) : (
+              <div className="ai-medium-art" aria-hidden="true">
+                <div className="creative-grid" />
+                {mode.type === "audio" ? (
+                  <div className="creative-wave">
+                    {Array.from({ length: 33 }, (_, i) => (
+                      <i
+                        key={i}
+                        style={{
+                          "--bar": `${18 + Math.abs(Math.sin(i * 0.63)) * 65}%`,
+                          "--beat": `${i * -0.13}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : mode.type === "models" ? (
+                  <div className="creative-model-flow">
+                    <span>Input</span>
+                    <i />
+                    <span>Model API</span>
+                    <i />
+                    <span>Product</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="creative-orb orb-one" />
+                    <div className="creative-orb orb-two" />
+                    <div className="creative-orb orb-three" />
+                    {mode.type === "motion" && (
+                      <div className="creative-timeline">
+                        <i />
+                        <i />
+                        <i />
+                        <i />
+                        <b />
+                      </div>
+                    )}
+                  </>
+                )}
+                <span className="creative-label">
+                  {mode.type === "audio"
+                    ? "Sound direction"
+                    : mode.type === "models"
+                      ? "Connected workflow"
+                      : mode.type === "motion"
+                        ? "Motion direction"
+                        : "Visual direction"}
+                </span>
+                <small>Illustrative sketch</small>
+              </div>
+            )}
+            <div className="creative-brief">
+              <span>
+                <Icon name="braces" /> A sample brief
+              </span>
+              <pre>
+                <code>
+                  {mode.brief.split("\n").map((line, i) => (
+                    <span key={i} style={{ "--line-delay": `${i * 0.08}s` }}>
+                      {line}
+                    </span>
+                  ))}
+                </code>
+              </pre>
+              <p>Prompt illustration · no live generation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PaperReader({ initialPage = 1 }) {
+  const canvas = useRef(null);
+  const [page, setPage] = useState(initialPage),
+    [zoom, setZoom] = useState(100);
+  useEffect(() => {
+    if (canvas.current)
+      canvas.current.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [page]);
+  return (
+    <div className="paper-reader-dialog">
+      <div className="paper-reader-actions">
+        <div>
+          <button
+            className="round-button"
+            aria-label="Previous reading page"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            <Icon name="chevron" className="turn-back" />
+          </button>
+          <strong aria-live="polite">
+            Article page {97 + page}
+            <small>Preview {page} of 6</small>
+          </strong>
+          <button
+            className="round-button"
+            aria-label="Next reading page"
+            disabled={page === 6}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            <Icon name="chevron" />
+          </button>
+        </div>
+        <div>
+          <button
+            aria-label="Zoom out"
+            disabled={zoom === 75}
+            onClick={() => setZoom((z) => Math.max(75, z - 25))}
+          >
+            −
+          </button>
+          <span>{zoom}%</span>
+          <button
+            aria-label="Zoom in"
+            disabled={zoom === 200}
+            onClick={() => setZoom((z) => Math.min(200, z + 25))}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div
+        className="paper-zoom-canvas"
+        ref={canvas}
+        tabIndex={0}
+        role="region"
+        aria-label="Published paper page. Scroll horizontally and vertically to read."
+      >
+        <img
+          key={page}
+          src={paperPageSrc(page)}
+          alt={`Published HealthOrbit article page ${97 + page}`}
+          style={{ width: `${zoom * 7}px` }}
+        />
+      </div>
+      <p>Scroll to read. Use + and − to adjust the page size.</p>
+      <External
+        className="text-link"
+        href={media("documents/healthorbit-research-paper.pdf")}
+      >
+        Open the complete PDF
+      </External>
+    </div>
+  );
+}
+
 function ProjectStage({ onOpen }) {
-  const [selected, setSelected] = useState(PROJECTS[0].id);
-  const [direction, setDirection] = useState(1);
+  const [selected, setSelected] = useState(PROJECTS[0].id),
+    [direction, setDirection] = useState(1);
+  const project = PROJECTS.find((p) => p.id === selected);
   const chooseProject = (id) => {
     setDirection(
       PROJECTS.findIndex((p) => p.id === id) >=
@@ -2108,11 +2852,11 @@ function ProjectStage({ onOpen }) {
     );
     setSelected(id);
   };
-  const project = PROJECTS.find((item) => item.id === selected);
   const openCase = () =>
     onOpen({ kind: "preview", item: project, onFinish: chooseProject });
   return (
     <section className="section-space work-section" id="work">
+      <WorkBackdrop />
       <div className="shell">
         <SectionHead eyebrow="Selected work" title="Selected projects.">
           <p>
@@ -2121,74 +2865,25 @@ function ProjectStage({ onOpen }) {
             and my part in making it happen.
           </p>
         </SectionHead>
-        <div className="project-layout">
-          <div
-            className="project-index"
-            role="group"
-            aria-label="Choose a project"
-          >
-            {PROJECTS.map((item) => (
-              <button
-                key={item.id}
-                aria-pressed={selected === item.id}
-                onClick={() => chooseProject(item.id)}
-              >
-                <span className="project-index-icon">
-                  <Icon name={item.icon} />
-                </span>
-                <span>
-                  <strong>{item.name}</strong>
-                  <small>{item.label}</small>
-                </span>
-                <Icon name="arrow" />
-              </button>
-            ))}
-            <External className="index-source" href={PROFILE.github}>
-              More on GitHub
-            </External>
-          </div>
-          <div
-            className="project-view"
-            style={{ "--app-direction": direction }}
-          >
-            <div className="tablet-stage">
-              <div className="tablet-frame">
-                <span className="tablet-camera" aria-hidden="true" />
-                <div className="tablet-viewport">
-                  <div className="tablet-app" key={project.id}>
-                    <div className="project-media">
-                      {project.hasVideo ? (
-                        <ProjectVideo
-                          project={project}
-                          onSmallScreen={() =>
-                            onOpen({
-                              kind: "film",
-                              item: project,
-                              title: `${project.name} walkthrough`,
-                            })
-                          }
-                        />
-                      ) : (
-                        <button
-                          className="project-concept"
-                          onClick={openCase}
-                          aria-label={`Explore ${project.name}`}
-                        >
-                          <ProjectCover project={project} />
-                          <span>
-                            Explore the project <Icon name="arrow" />
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p className="tablet-caption">
-                {project.hasVideo
-                  ? "Project walkthrough · play at your pace"
-                  : "Project overview · explore the build"}
-              </p>
+        <div
+          className="project-layout project-studio"
+          style={{ "--app-direction": direction }}
+        >
+          <div className="project-copy-column">
+            <div
+              className="project-index"
+              role="group"
+              aria-label="Choose a project"
+            >
+              {PROJECTS.map((p) => (
+                <button
+                  key={p.id}
+                  aria-pressed={p.id === selected}
+                  onClick={() => chooseProject(p.id)}
+                >
+                  <strong>{p.name}</strong>
+                </button>
+              ))}
             </div>
             <div className="project-info" key={project.id}>
               <p className="eyebrow">{project.label}</p>
@@ -2199,8 +2894,8 @@ function ProjectStage({ onOpen }) {
                 <p>{project.contribution}</p>
               </div>
               <div className="tag-list">
-                {project.stack.slice(0, 5).map((tag) => (
-                  <span key={tag}>{tag}</span>
+                {project.stack.slice(0, 5).map((t) => (
+                  <span key={t}>{t}</span>
                 ))}
               </div>
               <div className="project-actions">
@@ -2217,6 +2912,52 @@ function ProjectStage({ onOpen }) {
                 </External>
               </div>
             </div>
+          </div>
+          <div className="tablet-stage">
+            <div className="tablet-frame">
+              <span className="tablet-camera" aria-hidden="true" />
+              <div className="tablet-viewport">
+                <div className="tablet-app" key={project.id}>
+                  <div className="tablet-app-brand">
+                    <ProjectLogo project={project} />
+                    <strong>{project.name}</strong>
+                    <span>
+                      {project.hasVideo ? "Walkthrough" : "Project overview"}
+                    </span>
+                  </div>
+                  <div className="project-media">
+                    {project.hasVideo ? (
+                      <ProjectVideo
+                        project={project}
+                        onSmallScreen={() =>
+                          onOpen({
+                            kind: "film",
+                            item: project,
+                            title: `${project.name} walkthrough`,
+                          })
+                        }
+                      />
+                    ) : (
+                      <button
+                        className="project-concept"
+                        onClick={openCase}
+                        aria-label={`Explore ${project.name}`}
+                      >
+                        <ProjectCover project={project} />
+                        <span>
+                          Explore the project <Icon name="arrow" />
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="tablet-caption">
+              {project.hasVideo
+                ? "Project walkthrough · play at your pace"
+                : "Project overview · explore the build"}
+            </p>
           </div>
         </div>
         <details className="repository-collection">
@@ -2246,6 +2987,8 @@ function ProjectStage({ onOpen }) {
 
 function Approach({ onOpen }) {
   const [selected, setSelected] = useState(0);
+  const diagramRef = useRef(null);
+  usePointerPhysics(diagramRef);
   const steps = [
     {
       name: "Understand",
@@ -2309,106 +3052,167 @@ function Approach({ onOpen }) {
   ];
   const step = steps[selected];
   return (
-    <section className="section-space build-section" id="approach">
-      <AmbientField variant="build-graph" />
+    <section
+      className="section-space build-section method-section"
+      id="approach"
+    >
+      <div className="method-grid-background" aria-hidden="true" />
       <div className="shell">
         <SectionHead
           eyebrow="How I build"
           title={
             <>
-              Small decisions.<span>A better whole.</span>
+              An idea is the start.<span>The craft is in the build.</span>
             </>
           }
         >
           <p>
-            Understand the problem. Shape the interface.
+            Good software takes more than code.
             <br />
-            Connect the systems. Keep improving.
+            Here’s how I move it forward.
           </p>
         </SectionHead>
-        <div className="process-studio" data-reveal>
-          <div
-            className="process-sequence"
-            role="group"
-            aria-label="Explore the build process"
-          >
-            {steps.map((s, i) => (
-              <button
-                key={s.name}
-                aria-pressed={selected === i}
-                onClick={() => setSelected(i)}
-              >
-                <span className="process-step-icon">
-                  <Icon name={s.icon} />
-                </span>
-                <span>
-                  <small>{s.name}</small>
-                  <strong>{s.title}</strong>
-                </span>
-                <Icon name="arrow" />
-              </button>
-            ))}
-          </div>
-          <div className="process-editor">
-            <div
-              className="process-layers"
-              data-step={selected}
-              aria-hidden="true"
+        <div
+          className="method-journey"
+          role="group"
+          aria-label="Explore the build process"
+        >
+          {steps.map((item, i) => (
+            <button
+              key={item.name}
+              aria-pressed={selected === i}
+              onClick={() => setSelected(i)}
             >
-              <span className="layer-connector" />
-              {[
-                ["Interface", "Clear actions, considered details", "react"],
-                ["Application", "Logic, authentication, workflows", "braces"],
-                [
-                  "Data & context",
-                  "Useful information, connected safely",
-                  "mesh",
-                ],
-              ].map(([title, subtitle, icon], i) => (
-                <div
-                  className={`process-layer layer-${i} ${selected === 0 || selected === 3 || (selected === 1 && i === 0) || (selected === 2 && i > 0) ? "layer-active" : ""}`}
-                  key={title}
-                >
-                  <Icon name={selected === 3 ? "check" : icon} />
-                  <span>
-                    <strong>{title}</strong>
-                    <small>{subtitle}</small>
-                  </span>
-                  <i />
-                </div>
-              ))}
+              <span className="method-step-icon">
+                <Icon name={item.icon} />
+              </span>
+              <span>
+                <strong>{item.name}</strong>
+                <small>
+                  {
+                    [
+                      "Find the need",
+                      "Shape the experience",
+                      "Connect the systems",
+                      "Improve the details",
+                    ][i]
+                  }
+                </small>
+              </span>
+              <Icon name="chevron" />
+            </button>
+          ))}
+        </div>
+        <div className="method-detail">
+          <div className="method-story" key={`story-${selected}`}>
+            <p className="eyebrow">{step.name} / the way I work</p>
+            <h3>{step.title}</h3>
+            <p>{step.text}</p>
+            <div className="method-example">
+              <Icon name={step.icon} />
+              <p>{step.example}</p>
             </div>
-            <div className="process-detail" key={selected}>
-              <p>{step.text}</p>
-              <div className="build-code">
-                <div>
-                  <Icon name="braces" />
-                  <span>Thinking in code</span>
-                  <small>Illustrative sketch</small>
-                </div>
-                <pre>
-                  <code>
-                    {step.code.map((line, i) => (
-                      <span key={i} style={{ "--line-delay": `${i * 0.06}s` }}>
-                        <i aria-hidden="true">{i + 1}</i>
-                        {line}
-                        {i === step.code.length - 1 && (
-                          <b className="code-caret">▍</b>
-                        )}
+            <button
+              className="text-link"
+              onClick={() =>
+                onOpen({ kind: "capability", item: CAPABILITIES[selected] })
+              }
+            >
+              A closer look <Icon name="plus" />
+            </button>
+          </div>
+          <div className="method-art" ref={diagramRef}>
+            <div className="method-editor" key={`editor-${selected}`}>
+              <div className="method-editor-top">
+                <span>
+                  <Icon name="braces" />{" "}
+                  {
+                    ["brief.js", "interface.js", "connections.js", "refine.js"][
+                      selected
+                    ]
+                  }
+                </span>
+                <small>Thinking in code</small>
+              </div>
+              <pre>
+                <code>
+                  {step.code.map((line, i) => (
+                    <span key={i} style={{ "--line-delay": `${i * 0.07}s` }}>
+                      <i aria-hidden="true">{i + 1}</i>
+                      {line}
+                    </span>
+                  ))}
+                </code>
+              </pre>
+              <div className="method-output">
+                <span className="eyebrow">
+                  {
+                    [
+                      "The question",
+                      "The interface",
+                      "The connections",
+                      "The next version",
+                    ][selected]
+                  }
+                </span>
+                {selected === 0 ? (
+                  <div className="method-question">
+                    <Icon name="people" />
+                    <strong>What should be easier?</strong>
+                    <span>A person. A need. A clear next step.</span>
+                  </div>
+                ) : selected === 1 ? (
+                  <div
+                    className="method-wireframe"
+                    aria-label="Illustrative responsive interface"
+                  >
+                    <div>
+                      <i />
+                      <i />
+                      <i />
+                    </div>
+                    <span />
+                    <section>
+                      <i />
+                      <i />
+                      <i />
+                    </section>
+                    <b>Clear actions. Useful feedback.</b>
+                  </div>
+                ) : selected === 2 ? (
+                  <div className="method-connections">
+                    {[
+                      ["react", "Interface"],
+                      ["braces", "API & logic"],
+                      ["mesh", "Data & AI"],
+                    ].map(([icon, label]) => (
+                      <span key={label}>
+                        <Icon name={icon} />
+                        <strong>{label}</strong>
                       </span>
                     ))}
-                  </code>
-                </pre>
+                  </div>
+                ) : (
+                  <div className="method-checks">
+                    {[
+                      "Small screens",
+                      "Loading & empty states",
+                      "The complete journey",
+                    ].map((label, i) => (
+                      <span
+                        key={label}
+                        style={{ "--line-delay": `${i * 0.1}s` }}
+                      >
+                        <Icon name="check" />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <p className="process-example">{step.example}</p>
-              <button
-                className="text-link"
-                onClick={() =>
-                  onOpen({ kind: "capability", item: CAPABILITIES[selected] })
-                }
-              >
-                Explore this part <Icon name="plus" />
-              </button>
+              <p className="method-editor-note">
+                <i /> Illustrative sketch · the thinking behind the code
+              </p>
             </div>
           </div>
         </div>
@@ -2650,7 +3454,6 @@ function Photos({ onOpen }) {
             <button
               key={photo.id}
               className={`moment ${i === 0 ? "moment-lead" : ""}`}
-              data-reveal
               onClick={() =>
                 onOpen({ kind: "photo", item: photo, title: photo.title })
               }
@@ -2661,6 +3464,13 @@ function Photos({ onOpen }) {
                   src={media(`images/${photo.file}`)}
                   alt={photo.label}
                   loading="lazy"
+                  decoding="async"
+                  width={
+                    i === 0 ? 4505 : i === 1 ? 1448 : i === 2 ? 3086 : 1719
+                  }
+                  height={
+                    i === 0 ? 3083 : i === 1 ? 1086 : i === 2 ? 2607 : 1289
+                  }
                 />
               </span>
               <span className="moment-copy">
@@ -3057,7 +3867,7 @@ function Modal({ content, onClose }) {
   return (
     <dialog
       ref={ref}
-      className={`detail-dialog ${content.kind === "preview" || content.kind === "project" ? "case-dialog" : content.kind === "intro" ? "intro-dialog" : ""}`}
+      className={`detail-dialog ${content.kind === "paper-reader" ? "reader-dialog" : ""} ${content.kind === "preview" || content.kind === "project" ? "case-dialog" : content.kind === "intro" ? "intro-dialog" : ""}`}
       aria-labelledby={id}
       onCancel={(e) => {
         e.preventDefault();
@@ -3267,6 +4077,9 @@ function Modal({ content, onClose }) {
             </button>
           </>
         )}
+        {content.kind === "paper-reader" && (
+          <PaperReader initialPage={content.page} />
+        )}
         {content.kind === "photo" && (
           <>
             {media(`images/${item.file}`) ? (
@@ -3370,11 +4183,12 @@ export default function App() {
         <main id="main" tabIndex="-1">
           <Hero onOpen={setModal} />
           <ProjectStage onOpen={setModal} />
-          <Approach onOpen={setModal} />
-          <Skills />
-          <Research onOpen={setModal} />
           <Credentials onOpen={setModal} />
+          <Skills />
+          <AIPractice />
+          <Research onOpen={setModal} />
           <About />
+          <Approach onOpen={setModal} />
           <Photos onOpen={setModal} />
           <Contact />
         </main>
